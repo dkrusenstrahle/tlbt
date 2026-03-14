@@ -3,9 +3,11 @@ const path = require("path")
 const { spawn } = require("child_process")
 const { PassThrough } = require("stream")
 const {
+  SUPPORTED_MCP_PROTOCOL_VERSION,
   createMcpHandler,
   createMessageReader,
-  writeMessage
+  writeMessage,
+  startMcpServer
 } = require("../lib/mcp-server")
 const { cliPath } = require("./helpers")
 
@@ -20,7 +22,9 @@ test("initialize returns server capabilities", async () => {
 
   expect(response.jsonrpc).toBe("2.0")
   expect(response.id).toBe(1)
+  expect(response.result.protocolVersion).toBe(SUPPORTED_MCP_PROTOCOL_VERSION)
   expect(response.result.capabilities.tools).toBeTruthy()
+  expect(response.result.capabilities.tools.listChanged).toBe(true)
 })
 
 test("tools/list exposes tool metadata", async () => {
@@ -163,4 +167,44 @@ test("tlbt mcp command serves tools/list over stdio", async () => {
   expect(responses[0].result.tools.length).toBeGreaterThan(0)
 
   child.kill("SIGTERM")
+})
+
+test("initialize respects client protocol version", async () => {
+  const handler = createMcpHandler({ tools: {} })
+  const response = await handler.handle({
+    jsonrpc: "2.0",
+    id: 15,
+    method: "initialize",
+    params: { protocolVersion: "2025-01-01" }
+  })
+  expect(response.result.protocolVersion).toBe("2025-01-01")
+})
+
+test("mcp server can emit tools/list changed notifications", async () => {
+  const input = new PassThrough()
+  const output = new PassThrough()
+  const messages = []
+  createMessageReader(output, msg => messages.push(msg))
+
+  const running = startMcpServer({
+    loaded: {
+      tools: {},
+      errors: []
+    },
+    input,
+    output,
+    attachSignalHandlers: false
+  })
+  running.notifyToolsChanged()
+
+  await expect
+    .poll(() => messages.length, {
+      timeout: 2000
+    })
+    .toBeGreaterThan(0)
+
+  expect(messages[0]).toMatchObject({
+    jsonrpc: "2.0",
+    method: "notifications/tools/list_changed"
+  })
 })

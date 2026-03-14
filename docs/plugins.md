@@ -53,6 +53,47 @@ Plugin authors do not need to implement transport-specific logic. The same tool 
 
 TLBT wraps tool results in a transport envelope (`ok`, `data` or `error`, `meta`) at runtime.
 
+## Scaffold a new plugin
+
+Generate a plugin with implementation, tests, and docs:
+
+```bash
+tlbt create plugin github ./plugins/tlbt-tool-github
+```
+
+Generated scaffold includes:
+
+- `index.js` with one sample tool
+- `tests/plugin.spec.js` with run-path and schema checks
+- `README.md` with usage and conformance guidance
+
+## Typed SDK
+
+TLBT ships a lightweight typed SDK entrypoint:
+
+- `@tlbt/cli/lib/plugin-sdk`
+- type declarations: `@tlbt/cli/lib/plugin-sdk.d.ts`
+
+Example:
+
+```js
+const { definePlugin, defineTool } = require("@tlbt/cli/lib/plugin-sdk")
+```
+
+## Plugin conformance checks
+
+Validate plugin contract compatibility:
+
+```bash
+tlbt plugin:test ./plugins/tlbt-tool-github
+```
+
+Checks include:
+
+- required tool shape fields
+- schema compile validity
+- optional sample run and JSON serializability checks
+
 ## Install and test
 
 Install plugin into TLBT project:

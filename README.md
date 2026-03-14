@@ -2,6 +2,10 @@
 
 TLBT is a lightweight CLI runtime for tools designed to be called by humans, scripts, and AI agents.
 
+![Interop Gate](https://img.shields.io/badge/interop-gated-blue)
+![MCP Compatibility](https://img.shields.io/badge/mcp-compatible-green)
+![Extension DX](https://img.shields.io/badge/extensions-scaffolded-purple)
+
 The runtime stays intentionally small and focuses on:
 
 - tool discovery
@@ -54,6 +58,8 @@ tlbt tools
 tlbt <tool> [input]
 tlbt run <tool> <json>
 tlbt install <plugin>
+tlbt create plugin <name> [dir]
+tlbt plugin:test <path>
 tlbt serve
 tlbt mcp
 tlbt --version
@@ -83,6 +89,7 @@ See [Tool Contract v1](./docs/spec-tool-contract.md) for the canonical response 
 Optional policy and structured logging can be enabled without plugin changes:
 
 - `TLBT_POLICY_FILE=/path/to/policy.json` to enforce tool/path policy
+- `TLBT_POLICY_PRESET=strict|balanced|dev` for built-in guardrail defaults
 - `TLBT_LOG_JSON=1` to emit structured invocation logs to stderr
 
 Example policy:
@@ -93,6 +100,18 @@ Example policy:
   "enforceWorkspacePaths": true,
   "workspaceRoot": "."
 }
+```
+
+Preset behavior:
+
+- `dev`: no path enforcement, no denylist
+- `balanced`: enforce workspace path boundaries
+- `strict`: enforce workspace paths and deny `sys.*` tools by default
+
+Reliability metrics command:
+
+```bash
+npm run reliability:metrics
 ```
 
 ## Built-in Tools
@@ -136,11 +155,16 @@ Example policy:
 
 ## Documentation
 
-- [Quickstart](./docs/quickstart.md)
-- [CLI Reference](./docs/cli.md)
-- [HTTP API Reference](./docs/http-api.md)
-- [Plugin Authoring](./docs/plugins.md)
-- [Tool Contract v1](./docs/spec-tool-contract.md)
+- Quickstart path:
+  - [Quickstart](./docs/quickstart.md)
+- Framework maintainer path:
+  - [Framework Integration Guide](./docs/framework-integration.md)
+  - [Transport Compatibility](./docs/transport-compatibility.md)
+- Reference path:
+  - [CLI Reference](./docs/cli.md)
+  - [HTTP API Reference](./docs/http-api.md)
+  - [Plugin Authoring](./docs/plugins.md)
+  - [Tool Contract v1](./docs/spec-tool-contract.md)
 
 ## Tool Format
 

@@ -9,6 +9,13 @@
   "license": "MIT",
   "scripts": {
     "test": "playwright test",
+    "test:interop": "playwright test tests/interoperability.spec.js tests/mcp.spec.js tests/mcp-compat-matrix.spec.js",
+    "test:framework-kits": "playwright test tests/framework-kits.spec.js",
+    "test:plugin": "playwright test tests/plugin-scaffold.spec.js tests/plugin-conformance.spec.js",
+    "test:policy": "playwright test tests/policy.spec.js",
+    "test:ci": "npm run test:interop && npm run test:framework-kits && playwright test",
+    "mcp:compat-matrix": "playwright test tests/mcp.spec.js tests/mcp-compat-matrix.spec.js",
+    "reliability:metrics": "node scripts/reliability-metrics.js",
     "coverage": "c8 --reporter=text --reporter=lcov --check-coverage --lines 85 --functions 85 --branches 65 --statements 85 playwright test"
   },
   "dependencies": {

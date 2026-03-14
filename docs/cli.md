@@ -7,6 +7,8 @@ tlbt tools
 tlbt <tool> [input]
 tlbt run <tool> <json>
 tlbt install <plugin>
+tlbt create plugin <name> [dir]
+tlbt plugin:test <path>
 tlbt serve
 tlbt mcp
 tlbt --version
@@ -105,6 +107,26 @@ Result:
 }
 ```
 
+## `tlbt create plugin <name> [dir]`
+
+Creates a plugin scaffold including implementation, tests, and README.
+
+Example:
+
+```bash
+tlbt create plugin github ./plugins/tlbt-tool-github
+```
+
+## `tlbt plugin:test <path>`
+
+Runs plugin conformance checks against a plugin entry path.
+
+Example:
+
+```bash
+tlbt plugin:test ./plugins/tlbt-tool-github
+```
+
 ## `tlbt serve`
 
 Starts local HTTP tool server.
@@ -124,6 +146,7 @@ Use this mode when integrating TLBT with MCP-compatible agent runtimes.
 Optional environment variables:
 
 - `TLBT_POLICY_FILE`: path to a JSON policy file
+- `TLBT_POLICY_PRESET`: one of `dev`, `balanced`, `strict`
 - `TLBT_LOG_JSON=1`: emit structured invocation logs to stderr
 
 ## Error format

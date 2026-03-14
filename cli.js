@@ -7,6 +7,9 @@ const { getToolsMetadata, parseJsonInput } = require("./runtime")
 const { startServer } = require("./server")
 const { startMcpServer } = require("./lib/mcp-server")
 const { createExecutor } = require("./lib/executor")
+const { createPluginScaffold } = require("./lib/plugin-scaffold")
+const { runPluginConformance } = require("./lib/plugin-conformance")
+const { resolvePolicyPreset, mergePolicies } = require("./lib/policy")
 const {
   ERROR_CODES,
   createInvocationId,
@@ -24,6 +27,8 @@ Usage:
   tlbt <tool> [input]
   tlbt run <tool> <json>
   tlbt install <plugin>
+  tlbt create plugin <name> [dir]
+  tlbt plugin:test <path>
   tlbt serve
   tlbt mcp
   tlbt --version
@@ -32,6 +37,8 @@ Examples:
   tlbt repo.map .
   tlbt docs.headings README.md
   tlbt run repo.map '{"path":"."}'
+  tlbt create plugin github
+  tlbt plugin:test ./node_modules/tlbt-tool-github
 `
 }
 
@@ -56,18 +63,23 @@ function fail(log, command, code, message, details) {
 }
 
 function loadPolicy(deps = {}) {
-  if (deps.policy) {
-    return deps.policy
-  }
+  const presetName = deps.policyPreset || process.env.TLBT_POLICY_PRESET
+  const presetPolicy = resolvePolicyPreset(presetName) || {}
+  const directPolicy = deps.policy || {}
 
   const policyFile = deps.policyFile || process.env.TLBT_POLICY_FILE
-  if (!policyFile) return null
+  if (!policyFile) {
+    const mergedWithoutFile = mergePolicies(presetPolicy, directPolicy)
+    return Object.keys(mergedWithoutFile).length > 0 ? mergedWithoutFile : null
+  }
   const content = fs.readFileSync(policyFile, "utf8")
   const parsed = JSON.parse(content)
-  return {
+  const filePolicy = {
     ...parsed,
     workspaceRoot: parsed.workspaceRoot || process.cwd()
   }
+  const merged = mergePolicies(mergePolicies(presetPolicy, filePolicy), directPolicy)
+  return Object.keys(merged).length > 0 ? merged : null
 }
 
 function shouldEmitStructuredLogs(deps = {}) {
@@ -160,6 +172,47 @@ async function main(argv, deps = {}) {
     }
 
     printJson(log, successEnvelope(result, commandMeta(command)))
+    return 0
+  }
+
+  if (command === "create") {
+    const entity = argv[1]
+    if (entity !== "plugin") {
+      return fail(log, command, ERROR_CODES.invalidRequest, "Only `tlbt create plugin` is supported")
+    }
+
+    const pluginName = argv[2]
+    const targetDir = argv[3]
+    try {
+      const scaffold = createPluginScaffold({ name: pluginName, targetDir })
+      printJson(log, successEnvelope(scaffold, commandMeta(command)))
+      return 0
+    } catch (err) {
+      return fail(
+        log,
+        command,
+        ERROR_CODES.invalidRequest,
+        err.message || "Failed to create plugin scaffold"
+      )
+    }
+  }
+
+  if (command === "plugin:test") {
+    const pluginPath = argv[1]
+    const report = await runPluginConformance({ pluginPath })
+    if (!report.ok) {
+      printJson(
+        log,
+        errorEnvelope(
+          ERROR_CODES.validationError,
+          "Plugin conformance checks failed",
+          report,
+          commandMeta(command)
+        )
+      )
+      return 1
+    }
+    printJson(log, successEnvelope(report, commandMeta(command)))
     return 0
   }
 

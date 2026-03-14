@@ -2,6 +2,8 @@
 
 TLBT can run as a local HTTP server for agent and script integration.
 
+If you are building a framework adapter, see [Framework Integration Guide](./framework-integration.md) and [Transport Compatibility](./transport-compatibility.md).
+
 Start server:
 
 ```bash

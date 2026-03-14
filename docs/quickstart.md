@@ -2,6 +2,9 @@
 
 This guide gets you from install to first successful tool calls.
 
+For framework maintainers, use [Framework Integration Guide](./framework-integration.md).
+For protocol behavior details, use [Transport Compatibility](./transport-compatibility.md).
+
 ## Prerequisites
 
 - Node.js 18+
@@ -100,3 +103,12 @@ tlbt run repo.map '{"path":"."}' | jq
 ```
 
 All transports (CLI, HTTP, MCP) return the same result envelope with `ok`, `data` or `error`, and `meta`.
+
+## Extension quickstart
+
+Create and validate a plugin scaffold:
+
+```bash
+tlbt create plugin github ./plugins/tlbt-tool-github
+tlbt plugin:test ./plugins/tlbt-tool-github
+```

@@ -38,6 +38,19 @@ npm run coverage
 - Update documentation for CLI/server/tool contract changes.
 - Ensure `npm run coverage` passes before opening a PR.
 
+## Release-quality gates
+
+Before cutting a release tag:
+
+- Run interoperability gates: `npm run test:interop`
+- Run framework kit gates: `npm run test:framework-kits`
+- Run reliability report: `npm run reliability:metrics`
+- Confirm docs coverage for new commands/protocol behavior:
+  - `docs/quickstart.md`
+  - `docs/framework-integration.md`
+  - `docs/transport-compatibility.md`
+  - `docs/spec-tool-contract.md`
+
 ## Commit style
 
 - Use clear, imperative commit messages.

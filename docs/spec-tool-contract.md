@@ -80,6 +80,14 @@ All failed executions return:
 - MCP:
   - `tools/call` result includes envelope in `structuredContent`
   - `isError` mirrors `!ok`
+  - `initialize` returns negotiated `protocolVersion`
+  - `notifications/tools/list_changed` is supported for capability-compatible clients
+
+## MCP compatibility notes
+
+- Supported request methods: `initialize`, `ping`, `tools/list`, `tools/call`.
+- Unknown methods return JSON-RPC `-32601`.
+- Tool execution failures remain domain-level failures in `tools/call` payload (`isError: true`), not transport crashes.
 
 ## Compatibility policy
 
