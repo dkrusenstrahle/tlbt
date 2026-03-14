@@ -1,37 +1,29 @@
-# TLBT - Agent Toolbelt
+# TLBT - Toolbelt for Agent Builders
 
-TLBT is a lightweight CLI runtime for tools designed to be called by humans, scripts, and AI agents.
+TLBT helps you ship agent tooling that is reliable, composable, and easy to extend.
 
 ![Interop Gate](https://img.shields.io/badge/interop-gated-blue)
 ![MCP Compatibility](https://img.shields.io/badge/mcp-compatible-green)
 ![Extension DX](https://img.shields.io/badge/extensions-scaffolded-purple)
 
-The runtime stays intentionally small and focuses on:
+Build once, run everywhere:
 
-- tool discovery
-- tool execution
-- plugin loading
+- as a CLI for humans and scripts
+- as an HTTP service for workflows and apps
+- as an MCP server for agent frameworks
 
-All tool behavior lives in tools.
+All transports share one execution contract, so behavior stays predictable.
 
-## Why TLBT
+## Why teams pick TLBT
 
-TLBT provides small, composable non-AI primitives that agents frequently need:
+- **Interoperable by default**: same tools over CLI, HTTP, and MCP.
+- **Built for automation**: JSON-first outputs, schema-validated inputs.
+- **Extension-friendly**: scaffold plugins in minutes, validate with conformance checks.
+- **Production-minded**: policy guardrails, stable error codes, structured metadata.
 
-- repository analysis
-- documentation extraction
-- web scraping primitives
-- data transformation utilities
+## Start in 60 seconds
 
-Core philosophy:
-
-- **Small tools**: each tool does one thing well.
-- **Machine-friendly**: tools return JSON.
-- **Schema-based**: each tool declares JSON-schema input.
-- **Composable**: tools chain well in scripts and agents.
-- **Extensible**: plugin ecosystem via npm packages.
-
-## Quick Start
+From source:
 
 ```bash
 npm install
@@ -41,17 +33,21 @@ node cli.js serve
 node cli.js mcp
 ```
 
-When installed globally:
+Global install:
 
 ```bash
-npm install @tlbt/cli -g
+npm install -g @tlbt/cli
 tlbt tools
 tlbt run repo.map '{"path":"."}'
-tlbt serve
-tlbt mcp
 ```
 
-## Runtime Commands
+Local install tip (without global install):
+
+```bash
+npx tlbt tools
+```
+
+## Core commands
 
 ```bash
 tlbt tools
@@ -67,30 +63,54 @@ tlbt --version
 
 ## Interoperability
 
-TLBT supports three transport surfaces that share the same execution contract:
+TLBT supports three transports with one contract:
 
 - CLI (`tlbt run ...`)
-- HTTP (`tlbt serve`, then `POST /run`)
+- HTTP (`tlbt serve` then `POST /run`)
 - MCP stdio (`tlbt mcp`)
-
-Compatibility matrix:
 
 | Capability | CLI | HTTP | MCP |
 |---|---|---|---|
 | list tools | `tlbt tools` | `GET /tools` | `tools/list` |
 | run tool | `tlbt run` or `tlbt <tool>` | `POST /run` | `tools/call` |
-| contract envelope | yes | yes | yes |
+| same envelope shape | yes | yes | yes |
 | stable error codes | yes | yes | yes |
 
-See [Tool Contract v1](./docs/spec-tool-contract.md) for the canonical response and error semantics.
+Canonical contract: [Tool Contract v1](./docs/spec-tool-contract.md)
 
-## Policy and logging
+## Build your own plugin quickly
 
-Optional policy and structured logging can be enabled without plugin changes:
+Create a plugin scaffold with implementation, tests, and docs:
 
-- `TLBT_POLICY_FILE=/path/to/policy.json` to enforce tool/path policy
-- `TLBT_POLICY_PRESET=strict|balanced|dev` for built-in guardrail defaults
-- `TLBT_LOG_JSON=1` to emit structured invocation logs to stderr
+```bash
+tlbt create plugin github ./plugins/tlbt-tool-github
+```
+
+Validate compatibility:
+
+```bash
+tlbt plugin:test ./plugins/tlbt-tool-github
+```
+
+Every scaffold includes:
+
+- `index.js` sample tool
+- `tests/plugin.spec.js` run-path + schema checks
+- `README.md` with usage examples
+
+## Safety and trust
+
+Use policy guardrails without changing plugin code:
+
+- `TLBT_POLICY_FILE=/path/to/policy.json`
+- `TLBT_POLICY_PRESET=dev|balanced|strict`
+- `TLBT_LOG_JSON=1` for structured logs
+
+Preset behavior:
+
+- `dev`: no path enforcement, no denylist
+- `balanced`: enforce workspace path boundaries
+- `strict`: enforce workspace paths and block `sys.*` by default
 
 Example policy:
 
@@ -102,80 +122,41 @@ Example policy:
 }
 ```
 
-Preset behavior:
-
-- `dev`: no path enforcement, no denylist
-- `balanced`: enforce workspace path boundaries
-- `strict`: enforce workspace paths and deny `sys.*` tools by default
-
-Reliability metrics command:
+Reliability report:
 
 ```bash
 npm run reliability:metrics
 ```
 
-## Built-in Tools
+## Built-in tool families
 
-### Repo/Codebase
+- **Repo/Codebase**: mapping, search, read/write, patch, symbols.
+- **Docs/Knowledge**: headings, links, summaries, frontmatter.
+- **Web/Research**: fetch, extract text, metadata, status.
+- **Data/Transform**: JSON query, CSV to JSON, schema validation.
+- **System/Ops**: guarded exec, process inspection, env inspection.
 
-- `repo.map`: map repository structure with traversal controls.
-- `repo.findFiles`: list files by include/exclude patterns.
-- `repo.searchText`: search workspace text with match limits.
-- `repo.readFile`: read file content with optional line ranges.
-- `repo.writeFile`: write or create files in the workspace.
-- `repo.patchFile`: apply string-based file patches with dry-run support.
-- `repo.listSymbols`: extract likely symbols from source files.
+## Documentation map
 
-### Docs/Knowledge
-
-- `docs.headings`: extract markdown headings with level and line number.
-- `docs.extractLinks`: collect markdown links with context.
-- `docs.summarizeMarkdown`: summarize markdown by heading sections.
-- `docs.diffHeadings`: compare heading structures across two files.
-- `docs.frontmatter`: parse and validate markdown frontmatter fields.
-
-### Web/Research
-
-- `web.fetch`: fetch URL content with timeout and max-byte guardrails.
-- `web.extractText`: extract readable text from HTML or URL input.
-- `web.extractMetadata`: extract title/description/canonical/OpenGraph metadata.
-- `web.checkStatus`: inspect status code, headers, and redirect behavior.
-
-### Data/Transform
-
-- `data.jsonQuery`: query nested JSON by path expressions.
-- `data.csvToJson`: convert CSV (inline or file) into JSON rows.
-- `data.jsonSchemaValidate`: validate JSON payloads against a schema.
-
-### System/Ops
-
-- `sys.exec`: run allowlisted commands with strict timeout/output caps.
-- `sys.processList`: inspect running processes with optional filtering.
-- `sys.envInspect`: expose selected environment and runtime metadata.
-
-## Documentation
-
-- Quickstart path:
+- Getting started:
   - [Quickstart](./docs/quickstart.md)
-- Framework maintainer path:
+- Framework builders:
   - [Framework Integration Guide](./docs/framework-integration.md)
   - [Transport Compatibility](./docs/transport-compatibility.md)
-- Reference path:
+- References:
   - [CLI Reference](./docs/cli.md)
   - [HTTP API Reference](./docs/http-api.md)
   - [Plugin Authoring](./docs/plugins.md)
   - [Tool Contract v1](./docs/spec-tool-contract.md)
 
-## Tool Format
+## Minimal tool format
 
 Each tool exports:
 
 - `name`
 - `description`
-- `input` (JSON schema)
-- `run(input)` (sync or async, returns JSON)
-
-Example:
+- `input` (JSON Schema)
+- `run(input)` (sync or async, returns JSON-compatible data)
 
 ```js
 module.exports = {
