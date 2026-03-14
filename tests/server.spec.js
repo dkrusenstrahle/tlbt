@@ -39,8 +39,9 @@ test("GET /tools returns metadata and load errors", async () => {
   const response = await ctx.api.get("/tools")
   expect(response.status()).toBe(200)
   const payload = await response.json()
-  expect(payload.tools["example.echo"]).toBeTruthy()
-  expect(payload.loadErrors).toHaveLength(1)
+  expect(payload.ok).toBe(true)
+  expect(payload.data.tools["example.echo"]).toBeTruthy()
+  expect(payload.data.loadErrors).toHaveLength(1)
 
   await ctx.close()
 })
@@ -67,7 +68,10 @@ test("POST /run executes tool successfully", async () => {
     data: { tool: "example.echo", input: { value: "hello" } }
   })
   expect(response.status()).toBe(200)
-  expect(await response.json()).toEqual({ echoed: "hello" })
+  expect(await response.json()).toMatchObject({
+    ok: true,
+    data: { echoed: "hello" }
+  })
 
   await ctx.close()
 })
@@ -81,7 +85,10 @@ test("POST /run returns 400 for invalid body shape", async () => {
     data: "not-an-object"
   })
   expect(response.status()).toBe(400)
-  expect(await response.json()).toEqual({ error: "Invalid JSON body" })
+  expect(await response.json()).toMatchObject({
+    ok: false,
+    error: { code: "INVALID_REQUEST", message: "Invalid JSON body" }
+  })
 
   await ctx.close()
 })
@@ -96,7 +103,10 @@ test("POST /run returns 400 for invalid JSON body", async () => {
     data: "{"
   })
   expect(response.status()).toBe(400)
-  expect(await response.json()).toEqual({ error: "Invalid JSON body" })
+  expect(await response.json()).toMatchObject({
+    ok: false,
+    error: { code: "INVALID_REQUEST", message: "Invalid JSON body" }
+  })
 
   await ctx.close()
 })
@@ -109,7 +119,10 @@ test("POST /run returns 400 when body is an array", async () => {
     data: []
   })
   expect(response.status()).toBe(400)
-  expect(await response.json()).toEqual({ error: "Request body must be a JSON object" })
+  expect(await response.json()).toMatchObject({
+    ok: false,
+    error: { code: "INVALID_REQUEST", message: "Request body must be a JSON object" }
+  })
 
   await ctx.close()
 })
@@ -120,7 +133,10 @@ test("POST /run returns 400 for missing tool field", async () => {
 
   const response = await ctx.api.post("/run", { data: { input: {} } })
   expect(response.status()).toBe(400)
-  expect(await response.json()).toEqual({ error: "Field \"tool\" must be a non-empty string" })
+  expect(await response.json()).toMatchObject({
+    ok: false,
+    error: { code: "INVALID_REQUEST", message: "Field \"tool\" must be a non-empty string" }
+  })
 
   await ctx.close()
 })
@@ -131,7 +147,14 @@ test("POST /run returns 404 for unknown tool", async () => {
 
   const response = await ctx.api.post("/run", { data: { tool: "missing.tool", input: {} } })
   expect(response.status()).toBe(404)
-  expect(await response.json()).toEqual({ error: "Tool not found", tool: "missing.tool" })
+  expect(await response.json()).toMatchObject({
+    ok: false,
+    error: {
+      code: "TOOL_NOT_FOUND",
+      message: "Tool not found",
+      details: { tool: "missing.tool" }
+    }
+  })
 
   await ctx.close()
 })
@@ -162,7 +185,9 @@ test("POST /run returns 400 for schema validation errors", async () => {
   })
   expect(response.status()).toBe(400)
   const payload = await response.json()
-  expect(payload.error).toContain("must be >=")
+  expect(payload.ok).toBe(false)
+  expect(payload.error.code).toBe("VALIDATION_ERROR")
+  expect(payload.error.message).toContain("must be >=")
 
   await ctx.close()
 })
@@ -187,9 +212,13 @@ test("POST /run returns 500 when tool throws", async () => {
     data: { tool: "example.throw", input: {} }
   })
   expect(response.status()).toBe(500)
-  expect(await response.json()).toEqual({
-    error: "exploded",
-    tool: "example.throw"
+  expect(await response.json()).toMatchObject({
+    ok: false,
+    error: {
+      code: "TOOL_EXECUTION_FAILED",
+      message: "exploded",
+      details: { tool: "example.throw" }
+    }
   })
 
   await ctx.close()

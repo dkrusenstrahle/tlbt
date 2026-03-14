@@ -83,6 +83,14 @@ Override host and port:
 HOST=0.0.0.0 PORT=3000 tlbt serve
 ```
 
+## Start MCP mode
+
+```bash
+tlbt mcp
+```
+
+This starts an MCP stdio server for agent runtimes that speak MCP.
+
 ## Validate output
 
 TLBT commands return JSON. Pipe to jq if needed:
@@ -90,3 +98,5 @@ TLBT commands return JSON. Pipe to jq if needed:
 ```bash
 tlbt run repo.map '{"path":"."}' | jq
 ```
+
+All transports (CLI, HTTP, MCP) return the same result envelope with `ok`, `data` or `error`, and `meta`.

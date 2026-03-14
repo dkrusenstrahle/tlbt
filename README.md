@@ -34,6 +34,7 @@ npm install
 node cli.js tools
 node cli.js run repo.map '{"path":"."}'
 node cli.js serve
+node cli.js mcp
 ```
 
 When installed globally:
@@ -43,6 +44,7 @@ npm install @tlbt/cli -g
 tlbt tools
 tlbt run repo.map '{"path":"."}'
 tlbt serve
+tlbt mcp
 ```
 
 ## Runtime Commands
@@ -53,7 +55,44 @@ tlbt <tool> [input]
 tlbt run <tool> <json>
 tlbt install <plugin>
 tlbt serve
+tlbt mcp
 tlbt --version
+```
+
+## Interoperability
+
+TLBT supports three transport surfaces that share the same execution contract:
+
+- CLI (`tlbt run ...`)
+- HTTP (`tlbt serve`, then `POST /run`)
+- MCP stdio (`tlbt mcp`)
+
+Compatibility matrix:
+
+| Capability | CLI | HTTP | MCP |
+|---|---|---|---|
+| list tools | `tlbt tools` | `GET /tools` | `tools/list` |
+| run tool | `tlbt run` or `tlbt <tool>` | `POST /run` | `tools/call` |
+| contract envelope | yes | yes | yes |
+| stable error codes | yes | yes | yes |
+
+See [Tool Contract v1](./docs/spec-tool-contract.md) for the canonical response and error semantics.
+
+## Policy and logging
+
+Optional policy and structured logging can be enabled without plugin changes:
+
+- `TLBT_POLICY_FILE=/path/to/policy.json` to enforce tool/path policy
+- `TLBT_LOG_JSON=1` to emit structured invocation logs to stderr
+
+Example policy:
+
+```json
+{
+  "denyToolPrefixes": ["sys."],
+  "enforceWorkspacePaths": true,
+  "workspaceRoot": "."
+}
 ```
 
 ## Built-in Tools
@@ -101,6 +140,7 @@ tlbt --version
 - [CLI Reference](./docs/cli.md)
 - [HTTP API Reference](./docs/http-api.md)
 - [Plugin Authoring](./docs/plugins.md)
+- [Tool Contract v1](./docs/spec-tool-contract.md)
 
 ## Tool Format
 

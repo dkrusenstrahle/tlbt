@@ -13,20 +13,22 @@ test("prints version as JSON", async () => {
   const result = await runCli(["--version"])
   expect(result.code).toBe(0)
   const payload = parseJson(result.stdout)
-  expect(payload).toHaveProperty("version")
+  expect(payload.ok).toBe(true)
+  expect(payload.data).toHaveProperty("version")
 })
 
 test("lists tools metadata", async () => {
   const result = await runCli(["tools"])
   expect(result.code).toBe(0)
   const payload = parseJson(result.stdout)
-  expect(payload).toHaveProperty("tools")
-  expect(payload.tools["repo.map"]).toBeTruthy()
-  expect(payload.tools["repo.findFiles"]).toBeTruthy()
-  expect(payload.tools["docs.extractLinks"]).toBeTruthy()
-  expect(payload.tools["web.fetch"]).toBeTruthy()
-  expect(payload.tools["data.jsonQuery"]).toBeTruthy()
-  expect(payload.tools["sys.exec"]).toBeTruthy()
+  expect(payload.ok).toBe(true)
+  expect(payload.data).toHaveProperty("tools")
+  expect(payload.data.tools["repo.map"]).toBeTruthy()
+  expect(payload.data.tools["repo.findFiles"]).toBeTruthy()
+  expect(payload.data.tools["docs.extractLinks"]).toBeTruthy()
+  expect(payload.data.tools["web.fetch"]).toBeTruthy()
+  expect(payload.data.tools["data.jsonQuery"]).toBeTruthy()
+  expect(payload.data.tools["sys.exec"]).toBeTruthy()
 })
 
 test("runs tool through run command", async () => {
@@ -34,7 +36,8 @@ test("runs tool through run command", async () => {
   const result = await runCli(["run", "repo.map", JSON.stringify({ path: fixture, maxDepth: 1 })])
   expect(result.code).toBe(0)
   const payload = parseJson(result.stdout)
-  expect(payload).toHaveProperty("entries")
+  expect(payload.ok).toBe(true)
+  expect(payload.data).toHaveProperty("entries")
 })
 
 test("runs tool directly with path shortcut", async () => {
@@ -42,35 +45,40 @@ test("runs tool directly with path shortcut", async () => {
   const result = await runCli(["docs.headings", fixture])
   expect(result.code).toBe(0)
   const payload = parseJson(result.stdout)
-  expect(payload.headings.length).toBeGreaterThan(0)
+  expect(payload.ok).toBe(true)
+  expect(payload.data.headings.length).toBeGreaterThan(0)
 })
 
 test("returns error for unknown command", async () => {
   const result = await runCli(["nope.command"])
   expect(result.code).toBe(1)
   const payload = parseJson(result.stdout)
-  expect(payload.error).toContain("Unknown command or tool")
+  expect(payload.ok).toBe(false)
+  expect(payload.error.message).toContain("Unknown command or tool")
 })
 
 test("returns error for unknown tool on run", async () => {
   const result = await runCli(["run", "nope.tool", "{}"])
   expect(result.code).toBe(1)
   const payload = parseJson(result.stdout)
-  expect(payload.error).toContain("Tool not found")
+  expect(payload.ok).toBe(false)
+  expect(payload.error.message).toContain("Tool not found")
 })
 
 test("returns error for invalid JSON input", async () => {
   const result = await runCli(["run", "repo.map", "{not-json}"])
   expect(result.code).toBe(1)
   const payload = parseJson(result.stdout)
-  expect(payload.error).toContain("Invalid JSON input")
+  expect(payload.ok).toBe(false)
+  expect(payload.error.message).toContain("Invalid JSON input")
 })
 
 test("returns validation error for missing required field", async () => {
   const result = await runCli(["run", "repo.map", "{}"])
   expect(result.code).toBe(1)
   const payload = parseJson(result.stdout)
-  expect(payload.error).toContain("must have required property")
+  expect(payload.ok).toBe(false)
+  expect(payload.error.message).toContain("must have required property")
 })
 
 test("handles install command missing plugin argument", async () => {
@@ -81,7 +89,8 @@ test("handles install command missing plugin argument", async () => {
   })
 
   expect(exitCode).toBe(1)
-  expect(JSON.parse(output[0]).error).toContain("Please provide a plugin name")
+  const payload = JSON.parse(output[0])
+  expect(payload.error.message).toContain("Please provide a plugin name")
 })
 
 test("handles successful install command", async () => {
@@ -93,7 +102,9 @@ test("handles successful install command", async () => {
   })
 
   expect(exitCode).toBe(0)
-  expect(JSON.parse(output[0])).toEqual({ ok: true, plugin: "tlbt-tool-github" })
+  const payload = JSON.parse(output[0])
+  expect(payload.ok).toBe(true)
+  expect(payload.data).toEqual({ ok: true, plugin: "tlbt-tool-github" })
 })
 
 test("handles failed install command", async () => {
@@ -106,7 +117,8 @@ test("handles failed install command", async () => {
 
   expect(exitCode).toBe(1)
   const payload = JSON.parse(output[0])
-  expect(payload.error).toContain("Plugin install failed")
+  expect(payload.ok).toBe(false)
+  expect(payload.error.message).toContain("Plugin install failed")
 })
 
 test("calls injected server starter for serve command", async () => {
@@ -115,6 +127,20 @@ test("calls injected server starter for serve command", async () => {
     log: () => {},
     loaded: { tools: {}, errors: [] },
     startServer: () => {
+      called = true
+    }
+  })
+
+  expect(exitCode).toBe(0)
+  expect(called).toBe(true)
+})
+
+test("calls injected MCP starter for mcp command", async () => {
+  let called = false
+  const exitCode = await main(["mcp"], {
+    log: () => {},
+    loaded: { tools: {}, errors: [] },
+    startMcpServer: () => {
       called = true
     }
   })

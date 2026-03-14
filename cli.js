@@ -1,9 +1,18 @@
 #!/usr/bin/env node
 
+const fs = require("fs")
 const { loadTools } = require("./registry")
 const { installPlugin } = require("./plugins")
-const { getToolsMetadata, parseJsonInput, validateInput } = require("./runtime")
+const { getToolsMetadata, parseJsonInput } = require("./runtime")
 const { startServer } = require("./server")
+const { startMcpServer } = require("./lib/mcp-server")
+const { createExecutor } = require("./lib/executor")
+const {
+  ERROR_CODES,
+  createInvocationId,
+  successEnvelope,
+  errorEnvelope
+} = require("./lib/contracts")
 const pkg = require("./package.json")
 
 function showHelp() {
@@ -16,6 +25,7 @@ Usage:
   tlbt run <tool> <json>
   tlbt install <plugin>
   tlbt serve
+  tlbt mcp
   tlbt --version
 
 Examples:
@@ -29,21 +39,79 @@ function printJson(log, value) {
   log(JSON.stringify(value, null, 2))
 }
 
-function fail(log, error, details) {
-  const payload = { error }
-  if (details !== undefined) payload.details = details
+function commandMeta(command) {
+  return {
+    invocationId: createInvocationId(),
+    tool: command,
+    transport: "cli",
+    startedAt: new Date().toISOString(),
+    durationMs: 0
+  }
+}
+
+function fail(log, command, code, message, details) {
+  const payload = errorEnvelope(code, message, details, commandMeta(command))
   printJson(log, payload)
   return 1
+}
+
+function loadPolicy(deps = {}) {
+  if (deps.policy) {
+    return deps.policy
+  }
+
+  const policyFile = deps.policyFile || process.env.TLBT_POLICY_FILE
+  if (!policyFile) return null
+  const content = fs.readFileSync(policyFile, "utf8")
+  const parsed = JSON.parse(content)
+  return {
+    ...parsed,
+    workspaceRoot: parsed.workspaceRoot || process.cwd()
+  }
+}
+
+function shouldEmitStructuredLogs(deps = {}) {
+  if (deps.structuredLogging !== undefined) {
+    return Boolean(deps.structuredLogging)
+  }
+  return process.env.TLBT_LOG_JSON === "1"
+}
+
+function createStructuredLogger(deps = {}) {
+  if (!shouldEmitStructuredLogs(deps)) return null
+  const eventLog = deps.eventLog || console.error
+  return (event, payload) => {
+    eventLog(
+      JSON.stringify({
+        event,
+        ...payload
+      })
+    )
+  }
 }
 
 async function main(argv, deps = {}) {
   const log = deps.log || console.log
   const loaded = deps.loaded || loadTools()
   const startServerFn = deps.startServer || startServer
+  const startMcpServerFn = deps.startMcpServer || startMcpServer
   const installPluginFn = deps.installPlugin || installPlugin
   const tools = loaded.tools
   const loadErrors = loaded.errors
   const command = argv[0]
+  let policy
+
+  try {
+    policy = loadPolicy(deps)
+  } catch (err) {
+    return fail(
+      log,
+      command || "policy",
+      ERROR_CODES.invalidRequest,
+      `Failed to load policy: ${err.message || String(err)}`
+    )
+  }
+  const structuredLogger = createStructuredLogger(deps)
 
   if (!command || command === "help") {
     log(showHelp())
@@ -51,30 +119,47 @@ async function main(argv, deps = {}) {
   }
 
   if (command === "--version" || command === "-v") {
-    printJson(log, { version: pkg.version })
+    printJson(log, successEnvelope({ version: pkg.version }, commandMeta(command)))
     return 0
   }
 
   if (command === "tools") {
-    printJson(log, {
-      tools: getToolsMetadata(tools),
-      loadErrors
-    })
+    printJson(
+      log,
+      successEnvelope(
+        {
+          tools: getToolsMetadata(tools),
+          loadErrors
+        },
+        commandMeta(command)
+      )
+    )
     return 0
   }
 
   if (command === "install") {
     const plugin = argv[1]
     if (!plugin) {
-      return fail(log, "Please provide a plugin name")
+      return fail(
+        log,
+        command,
+        ERROR_CODES.invalidRequest,
+        "Please provide a plugin name"
+      )
     }
 
     const result = installPluginFn(plugin, deps.installOptions)
     if (!result.ok) {
-      return fail(log, "Plugin install failed", result)
+      return fail(
+        log,
+        command,
+        ERROR_CODES.toolExecutionFailed,
+        "Plugin install failed",
+        result
+      )
     }
 
-    printJson(log, result)
+    printJson(log, successEnvelope(result, commandMeta(command)))
     return 0
   }
 
@@ -83,37 +168,49 @@ async function main(argv, deps = {}) {
       loaded,
       host: deps.host,
       port: deps.port,
+      attachSignalHandlers: deps.attachSignalHandlers,
+      policy,
+      logger: structuredLogger
+    })
+    return 0
+  }
+
+  if (command === "mcp") {
+    startMcpServerFn({
+      loaded,
+      policy,
+      logger: structuredLogger,
       attachSignalHandlers: deps.attachSignalHandlers
     })
     return 0
   }
 
+  const executor = createExecutor({
+    tools,
+    policy,
+    transport: "cli",
+    logger: structuredLogger,
+    executionTimeoutMs: deps.executionTimeoutMs
+  })
+
   if (command === "run") {
     const toolName = argv[1]
     const inputJson = argv[2] || "{}"
-    const tool = tools[toolName]
-
-    if (!tool) {
-      return fail(log, "Tool not found", { tool: toolName, loadErrors })
-    }
 
     const parsed = parseJsonInput(inputJson)
     if (!parsed.ok) {
-      return fail(log, parsed.error)
+      return fail(log, command, ERROR_CODES.invalidRequest, parsed.error)
     }
 
-    const validation = validateInput(tool.input, parsed.value)
-    if (!validation.ok) {
-      return fail(log, validation.error, { tool: toolName })
+    const result = await executor.execute(toolName, parsed.value)
+    if (!result.ok && result.error.code === ERROR_CODES.toolNotFound) {
+      result.error.details = {
+        ...(result.error.details || {}),
+        loadErrors
+      }
     }
-
-    try {
-      const result = await Promise.resolve(tool.run(parsed.value))
-      printJson(log, result)
-      return 0
-    } catch (err) {
-      return fail(log, err.message || String(err), { tool: toolName })
-    }
+    printJson(log, result)
+    return result.ok ? 0 : 1
   }
 
   /*
@@ -122,18 +219,13 @@ async function main(argv, deps = {}) {
     tlbt repo.map .
     tlbt docs.headings README.md
   */
-  const tool = tools[command]
-  if (!tool) {
-    return fail(log, "Unknown command or tool", { command, loadErrors })
-  }
-
   const rawInput = argv[1]
   let input = {}
   if (rawInput) {
     if (rawInput.startsWith("{")) {
       const parsed = parseJsonInput(rawInput)
       if (!parsed.ok) {
-        return fail(log, parsed.error)
+        return fail(log, command, ERROR_CODES.invalidRequest, parsed.error)
       }
       input = parsed.value
     } else {
@@ -144,18 +236,16 @@ async function main(argv, deps = {}) {
     }
   }
 
-  const validation = validateInput(tool.input, input)
-  if (!validation.ok) {
-    return fail(log, validation.error, { tool: command })
+  const result = await executor.execute(command, input)
+  if (!result.ok && result.error.code === ERROR_CODES.toolNotFound) {
+    result.error.message = "Unknown command or tool"
+    result.error.details = {
+      command,
+      loadErrors
+    }
   }
-
-  try {
-    const result = await Promise.resolve(tool.run(input))
-    printJson(log, result)
-    return 0
-  } catch (err) {
-    return fail(log, err.message || String(err), { tool: command })
-  }
+  printJson(log, result)
+  return result.ok ? 0 : 1
 }
 
 if (require.main === module) {

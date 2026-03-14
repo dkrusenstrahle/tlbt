@@ -1,6 +1,24 @@
 const express = require("express")
 const { loadTools } = require("./registry")
-const { getToolsMetadata, validateInput } = require("./runtime")
+const { getToolsMetadata } = require("./runtime")
+const { createExecutor } = require("./lib/executor")
+const {
+  ERROR_CODES,
+  createInvocationId,
+  errorEnvelope,
+  successEnvelope,
+  statusCodeForErrorCode
+} = require("./lib/contracts")
+
+function commandMeta(command) {
+  return {
+    invocationId: createInvocationId(),
+    tool: command,
+    transport: "http",
+    startedAt: new Date().toISOString(),
+    durationMs: 0
+  }
+}
 
 function createApp(options = {}) {
   const app = express()
@@ -15,50 +33,77 @@ function createApp(options = {}) {
     next()
   })
 
+  const executor = createExecutor({
+    tools,
+    policy: options.policy,
+    executionTimeoutMs: options.executionTimeoutMs,
+    logger: options.logger,
+    transport: "http"
+  })
+
   app.get("/tools", (req, res) => {
-    res.json({
-      tools: getToolsMetadata(tools),
-      loadErrors
-    })
+    res.json(
+      successEnvelope(
+        {
+          tools: getToolsMetadata(tools),
+          loadErrors
+        },
+        commandMeta("tools")
+      )
+    )
   })
 
   app.post("/run", async (req, res) => {
     if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
-      return res.status(400).json({ error: "Request body must be a JSON object" })
+      return res.status(400).json(
+        errorEnvelope(
+          ERROR_CODES.invalidRequest,
+          "Request body must be a JSON object",
+          undefined,
+          commandMeta("run")
+        )
+      )
     }
 
     const { tool, input } = req.body
     if (typeof tool !== "string" || tool.length === 0) {
-      return res.status(400).json({ error: "Field \"tool\" must be a non-empty string" })
+      return res.status(400).json(
+        errorEnvelope(
+          ERROR_CODES.invalidRequest,
+          "Field \"tool\" must be a non-empty string",
+          { tool },
+          commandMeta("run")
+        )
+      )
     }
 
-    const t = tools[tool]
-    if (!t) {
-      return res.status(404).json({ error: "Tool not found", tool })
+    const result = await executor.execute(tool, input || {})
+    if (!result.ok) {
+      const statusCode = statusCodeForErrorCode(result.error.code)
+      return res.status(statusCode).json(result)
     }
 
-    const validation = validateInput(t.input, input || {})
-    if (!validation.ok) {
-      return res.status(400).json({ error: validation.error, tool })
-    }
-
-    try {
-      const result = await t.run(input || {})
-      res.json(result)
-    } catch (err) {
-      res.status(500).json({ error: err.message || "Tool execution failed", tool })
-    }
+    return res.json(result)
   })
 
   app.use((err, req, res, next) => {
     if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
-      return res.status(400).json({ error: "Invalid JSON body" })
+      return res
+        .status(400)
+        .json(errorEnvelope(ERROR_CODES.invalidRequest, "Invalid JSON body", undefined, commandMeta("run")))
     }
     return next(err)
   })
 
   app.use((err, req, res, next) => {
-    res.status(500).json({ error: err.message || "Internal server error" })
+    res.status(500).json(
+      errorEnvelope(
+        ERROR_CODES.internalError,
+        err.message || "Internal server error",
+        undefined,
+        commandMeta("server")
+      )
+    )
   })
 
   return app
@@ -68,10 +113,20 @@ function startServer(options = {}) {
   const host = options.host || process.env.HOST || "127.0.0.1"
   const port = Number(options.port || process.env.PORT || 8787)
   const loaded = options.loaded || loadTools()
+  const logger =
+    options.logger ||
+    (process.env.TLBT_LOG_JSON === "1"
+      ? (event, payload) => {
+          console.error(JSON.stringify({ event, ...payload }))
+        }
+      : null)
   const app = createApp({
     tools: loaded.tools,
     loadErrors: loaded.errors,
-    requestTimeoutMs: options.requestTimeoutMs
+    requestTimeoutMs: options.requestTimeoutMs,
+    executionTimeoutMs: options.executionTimeoutMs || options.requestTimeoutMs,
+    policy: options.policy,
+    logger
   })
 
   const server = app.listen(port, host, () => {

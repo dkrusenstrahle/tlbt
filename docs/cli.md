@@ -8,6 +8,7 @@ tlbt <tool> [input]
 tlbt run <tool> <json>
 tlbt install <plugin>
 tlbt serve
+tlbt mcp
 tlbt --version
 ```
 
@@ -25,13 +26,15 @@ Response shape:
 
 ```json
 {
-  "tools": {
-    "repo.map": {
-      "description": "Map repository structure",
-      "input": { "type": "object" }
+  "ok": true,
+  "data": {
+    "tools": {
+      "repo.map": {
+        "description": "Map repository structure",
+        "input": { "type": "object" }
+      }
     }
-  },
-  "loadErrors": []
+  }
 }
 ```
 
@@ -62,15 +65,23 @@ tlbt docs.headings README.md
 
 ## Tool output shape
 
-Most new built-in tools return this success envelope:
+All tool execution paths return a shared transport envelope:
 
 ```json
 {
-  "ok": true
+  "ok": true,
+  "data": {},
+  "meta": {
+    "invocationId": "uuid",
+    "tool": "repo.map",
+    "transport": "cli",
+    "startedAt": "2026-01-01T00:00:00.000Z",
+    "durationMs": 12
+  }
 }
 ```
 
-Tool-specific fields are included alongside `ok`.
+Tool-specific fields are included in `data`.
 
 ## `tlbt install <plugin>`
 
@@ -85,7 +96,13 @@ tlbt install github
 Result:
 
 ```json
-{ "ok": true, "plugin": "tlbt-tool-github" }
+{
+  "ok": true,
+  "data": {
+    "ok": true,
+    "plugin": "tlbt-tool-github"
+  }
+}
 ```
 
 ## `tlbt serve`
@@ -96,13 +113,33 @@ Environment:
 - `HOST` (default: `127.0.0.1`)
 - `PORT` (default: `8787`)
 
+## `tlbt mcp`
+
+Starts an MCP stdio server using the same tool registry and execution contract.
+
+Use this mode when integrating TLBT with MCP-compatible agent runtimes.
+
+## Policy and structured logs
+
+Optional environment variables:
+
+- `TLBT_POLICY_FILE`: path to a JSON policy file
+- `TLBT_LOG_JSON=1`: emit structured invocation logs to stderr
+
 ## Error format
 
-Command errors are returned as JSON:
+Command and tool errors are returned with stable codes:
 
 ```json
 {
-  "error": "Tool not found",
-  "details": { "tool": "missing.tool" }
+  "ok": false,
+  "error": {
+    "code": "TOOL_NOT_FOUND",
+    "message": "Tool not found",
+    "details": { "tool": "missing.tool" }
+  },
+  "meta": {
+    "invocationId": "uuid"
+  }
 }
 ```

@@ -24,19 +24,22 @@ Response:
 
 ```json
 {
-  "tools": {
-    "repo.map": {
-      "description": "Map repository structure",
-      "input": {
-        "type": "object",
-        "properties": {
-          "path": { "type": "string" }
+  "ok": true,
+  "data": {
+    "tools": {
+      "repo.map": {
+        "description": "Map repository structure",
+        "input": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string" }
+          },
+          "required": ["path"]
         },
-        "required": ["path"]
       }
-    }
-  },
-  "loadErrors": []
+    },
+    "loadErrors": []
+  }
 }
 ```
 
@@ -73,7 +76,13 @@ Typical success payload:
 
 ```json
 {
-  "ok": true
+  "ok": true,
+  "data": {},
+  "meta": {
+    "invocationId": "uuid",
+    "tool": "repo.map",
+    "transport": "http"
+  }
 }
 ```
 
@@ -88,7 +97,16 @@ Error shape:
 
 ```json
 {
-  "error": "Tool not found",
-  "tool": "missing.tool"
+  "ok": false,
+  "error": {
+    "code": "TOOL_NOT_FOUND",
+    "message": "Tool not found",
+    "details": {
+      "tool": "missing.tool"
+    }
+  },
+  "meta": {
+    "invocationId": "uuid"
+  }
 }
 ```

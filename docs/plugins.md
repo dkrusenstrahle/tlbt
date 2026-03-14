@@ -45,6 +45,14 @@ Each tool should provide:
 - `input` (JSON schema object)
 - `run(input)` function returning JSON-compatible data
 
+Plugin authors do not need to implement transport-specific logic. The same tool works across:
+
+- CLI (`tlbt run`)
+- HTTP (`POST /run`)
+- MCP (`tools/call`)
+
+TLBT wraps tool results in a transport envelope (`ok`, `data` or `error`, `meta`) at runtime.
+
 ## Install and test
 
 Install plugin into TLBT project:
