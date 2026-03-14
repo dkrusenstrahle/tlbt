@@ -1,0 +1,10 @@
+{
+  "name": "@tlbt/cli",
+  "version": "0.0.1",
+  "description": "TLBT – Toolbelt for AI agents",
+  "bin": {
+    "tlbt": "./cli.js"
+  },
+  "preferGlobal": true,
+  "license": "MIT"
+}
