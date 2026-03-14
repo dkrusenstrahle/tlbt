@@ -2,14 +2,12 @@
 
 const { loadTools } = require("./registry")
 const { installPlugin } = require("./plugins")
+const { getToolsMetadata, parseJsonInput, validateInput } = require("./runtime")
+const { startServer } = require("./server")
 const pkg = require("./package.json")
 
-const tools = loadTools()
-const args = process.argv.slice(2)
-const command = args[0]
-
 function showHelp() {
-  console.log(`
+  return `
 TLBT — Agent Toolbelt
 
 Usage:
@@ -24,102 +22,147 @@ Examples:
   tlbt repo.map .
   tlbt docs.headings README.md
   tlbt run repo.map '{"path":"."}'
-`)
+`
 }
 
-if (!command || command === "help") {
-  showHelp()
-  process.exit(0)
+function printJson(log, value) {
+  log(JSON.stringify(value, null, 2))
 }
 
-if (command === "--version" || command === "-v") {
-  console.log(pkg.version)
-  process.exit(0)
+function fail(log, error, details) {
+  const payload = { error }
+  if (details !== undefined) payload.details = details
+  printJson(log, payload)
+  return 1
 }
 
-if (command === "tools") {
-  const output = {}
+async function main(argv, deps = {}) {
+  const log = deps.log || console.log
+  const loaded = deps.loaded || loadTools()
+  const startServerFn = deps.startServer || startServer
+  const installPluginFn = deps.installPlugin || installPlugin
+  const tools = loaded.tools
+  const loadErrors = loaded.errors
+  const command = argv[0]
 
-  for (const name in tools) {
-    output[name] = {
-      description: tools[name].description,
-      input: tools[name].input
-    }
+  if (!command || command === "help") {
+    log(showHelp())
+    return 0
   }
 
-  console.log(JSON.stringify(output, null, 2))
-  process.exit(0)
-}
-
-if (command === "install") {
-  const plugin = args[1]
-
-  if (!plugin) {
-    console.error("Please provide a plugin name")
-    process.exit(1)
+  if (command === "--version" || command === "-v") {
+    printJson(log, { version: pkg.version })
+    return 0
   }
 
-  installPlugin(plugin)
-  return
-}
-
-if (command === "serve") {
-  require("./server")
-  return
-}
-
-if (command === "run") {
-  const toolName = args[1]
-  const inputJson = args[2] || "{}"
-
-  const tool = tools[toolName]
-
-  if (!tool) {
-    console.error("Tool not found:", toolName)
-    process.exit(1)
-  }
-
-  const input = JSON.parse(inputJson)
-
-  Promise.resolve(tool.run(input))
-    .then(result => {
-      console.log(JSON.stringify(result, null, 2))
+  if (command === "tools") {
+    printJson(log, {
+      tools: getToolsMetadata(tools),
+      loadErrors
     })
-    .catch(err => console.error(err))
+    return 0
+  }
 
-  return
-}
-
-/*
-Direct tool execution
-Example:
-  tlbt repo.map .
-  tlbt docs.headings README.md
-*/
-
-const tool = tools[command]
-
-if (!tool) {
-  console.error("Unknown command or tool:", command)
-  process.exit(1)
-}
-
-const rawInput = args[1]
-let input = {}
-
-if (rawInput) {
-  if (rawInput.startsWith("{")) {
-    input = JSON.parse(rawInput)
-  } else {
-    input = {
-      path: rawInput,
-      file: rawInput
+  if (command === "install") {
+    const plugin = argv[1]
+    if (!plugin) {
+      return fail(log, "Please provide a plugin name")
     }
+
+    const result = installPluginFn(plugin, deps.installOptions)
+    if (!result.ok) {
+      return fail(log, "Plugin install failed", result)
+    }
+
+    printJson(log, result)
+    return 0
+  }
+
+  if (command === "serve") {
+    startServerFn({
+      loaded,
+      host: deps.host,
+      port: deps.port,
+      attachSignalHandlers: deps.attachSignalHandlers
+    })
+    return 0
+  }
+
+  if (command === "run") {
+    const toolName = argv[1]
+    const inputJson = argv[2] || "{}"
+    const tool = tools[toolName]
+
+    if (!tool) {
+      return fail(log, "Tool not found", { tool: toolName, loadErrors })
+    }
+
+    const parsed = parseJsonInput(inputJson)
+    if (!parsed.ok) {
+      return fail(log, parsed.error)
+    }
+
+    const validation = validateInput(tool.input, parsed.value)
+    if (!validation.ok) {
+      return fail(log, validation.error, { tool: toolName })
+    }
+
+    try {
+      const result = await Promise.resolve(tool.run(parsed.value))
+      printJson(log, result)
+      return 0
+    } catch (err) {
+      return fail(log, err.message || String(err), { tool: toolName })
+    }
+  }
+
+  /*
+  Direct tool execution
+  Example:
+    tlbt repo.map .
+    tlbt docs.headings README.md
+  */
+  const tool = tools[command]
+  if (!tool) {
+    return fail(log, "Unknown command or tool", { command, loadErrors })
+  }
+
+  const rawInput = argv[1]
+  let input = {}
+  if (rawInput) {
+    if (rawInput.startsWith("{")) {
+      const parsed = parseJsonInput(rawInput)
+      if (!parsed.ok) {
+        return fail(log, parsed.error)
+      }
+      input = parsed.value
+    } else {
+      input = {
+        path: rawInput,
+        file: rawInput
+      }
+    }
+  }
+
+  const validation = validateInput(tool.input, input)
+  if (!validation.ok) {
+    return fail(log, validation.error, { tool: command })
+  }
+
+  try {
+    const result = await Promise.resolve(tool.run(input))
+    printJson(log, result)
+    return 0
+  } catch (err) {
+    return fail(log, err.message || String(err), { tool: command })
   }
 }
 
-Promise.resolve(tool.run(input))
-  .then(result => {
-    console.log(JSON.stringify(result, null, 2))
-  })
-  .catch(err => console.error(err))
+if (require.main === module) {
+  main(process.argv.slice(2)).then(code => process.exit(code))
+}
+
+module.exports = {
+  main,
+  showHelp
+}

@@ -7,8 +7,16 @@
   },
   "preferGlobal": true,
   "license": "MIT",
+  "scripts": {
+    "test": "playwright test",
+    "coverage": "c8 --reporter=text --reporter=lcov --check-coverage --lines 85 --functions 85 --branches 65 --statements 85 playwright test"
+  },
   "dependencies": {
-    "@tlbt/cli": "^0.0.2",
+    "ajv": "^8.17.1",
     "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2",
+    "c8": "^10.1.3"
   }
 }

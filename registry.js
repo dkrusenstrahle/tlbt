@@ -1,48 +1,147 @@
 const fs = require("fs")
 const path = require("path")
 
-function loadLocalTools(tools) {
-  const base = path.join(__dirname, "tools")
+let cachedResult = null
 
-  const categories = fs.readdirSync(base)
+function createRegistryResult() {
+  return {
+    tools: {},
+    errors: []
+  }
+}
+
+function registerTool(result, tool, source) {
+  if (!tool || typeof tool !== "object") {
+    result.errors.push({ source, error: "Invalid tool export (expected object)" })
+    return
+  }
+
+  if (!tool.name || typeof tool.name !== "string") {
+    result.errors.push({ source, error: "Tool is missing a valid name" })
+    return
+  }
+
+  if (typeof tool.run !== "function") {
+    result.errors.push({
+      source,
+      error: `Tool "${tool.name}" is missing a run(input) function`
+    })
+    return
+  }
+
+  if (result.tools[tool.name]) {
+    result.errors.push({
+      source,
+      error: `Duplicate tool name "${tool.name}" ignored`
+    })
+    return
+  }
+
+  result.tools[tool.name] = tool
+}
+
+function safeRequire(modulePath, result, source) {
+  try {
+    return require(modulePath)
+  } catch (err) {
+    result.errors.push({
+      source,
+      error: err.message || "Failed to load module"
+    })
+    return null
+  }
+}
+
+function loadLocalTools(result, baseDir) {
+  const base = path.join(baseDir, "tools")
+  if (!fs.existsSync(base)) return
+
+  const categories = fs.readdirSync(base, { withFileTypes: true })
 
   for (const cat of categories) {
-    const files = fs.readdirSync(path.join(base, cat))
+    if (!cat.isDirectory()) continue
+    const categoryPath = path.join(base, cat.name)
+    const files = fs.readdirSync(categoryPath, { withFileTypes: true })
 
     for (const file of files) {
-      const tool = require(`./tools/${cat}/${file}`)
-      tools[tool.name] = tool
+      if (!file.isFile() || path.extname(file.name) !== ".js") continue
+      const filePath = path.join(categoryPath, file.name)
+      const tool = safeRequire(filePath, result, `local:${filePath}`)
+      if (!tool) continue
+      registerTool(result, tool, `local:${filePath}`)
     }
   }
 }
 
-function loadPluginTools(tools) {
-  const nodeModules = path.join(process.cwd(), "node_modules")
+function getPluginDirectories(nodeModulesPath) {
+  const entries = fs.readdirSync(nodeModulesPath, { withFileTypes: true })
+  const dirs = []
 
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+
+    if (entry.name.startsWith("tlbt-tool-")) {
+      dirs.push(path.join(nodeModulesPath, entry.name))
+      continue
+    }
+
+    if (!entry.name.startsWith("@")) continue
+
+    const scopePath = path.join(nodeModulesPath, entry.name)
+    const scopedEntries = fs.readdirSync(scopePath, { withFileTypes: true })
+    for (const scopedEntry of scopedEntries) {
+      if (!scopedEntry.isDirectory()) continue
+      if (!scopedEntry.name.startsWith("tlbt-tool-")) continue
+      dirs.push(path.join(scopePath, scopedEntry.name))
+    }
+  }
+
+  return dirs
+}
+
+function loadPluginTools(result, cwd) {
+  const nodeModules = path.join(cwd, "node_modules")
   if (!fs.existsSync(nodeModules)) return
 
-  const packages = fs.readdirSync(nodeModules)
+  const pluginDirs = getPluginDirectories(nodeModules)
+  for (const pluginDir of pluginDirs) {
+    const plugin = safeRequire(pluginDir, result, `plugin:${pluginDir}`)
+    if (!plugin) continue
 
-  for (const pkg of packages) {
-    if (pkg.startsWith("tlbt-tool-")) {
-      const plugin = require(path.join(nodeModules, pkg))
+    if (!Array.isArray(plugin.tools)) {
+      result.errors.push({
+        source: `plugin:${pluginDir}`,
+        error: "Plugin export is missing a tools array"
+      })
+      continue
+    }
 
-      if (plugin.tools) {
-        for (const tool of plugin.tools) {
-          tools[tool.name] = tool
-        }
-      }
+    for (const tool of plugin.tools) {
+      registerTool(result, tool, `plugin:${pluginDir}`)
     }
   }
 }
 
-function loadTools() {
-  const tools = {}
+function loadTools(options = {}) {
+  const useCache = options.useCache !== false
+  if (useCache && cachedResult) return cachedResult
 
-  loadLocalTools(tools)
-  loadPluginTools(tools)
+  const baseDir = options.baseDir || __dirname
+  const cwd = options.cwd || process.cwd()
+  const result = createRegistryResult()
 
-  return tools
+  loadLocalTools(result, baseDir)
+  loadPluginTools(result, cwd)
+
+  if (useCache) cachedResult = result
+  return result
 }
 
-module.exports = { loadTools }
+function clearToolsCache() {
+  cachedResult = null
+}
+
+module.exports = {
+  loadTools,
+  clearToolsCache
+}
