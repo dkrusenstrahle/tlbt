@@ -159,7 +159,9 @@ async function main(argv, deps = {}) {
 }
 
 if (require.main === module) {
-  main(process.argv.slice(2)).then(code => process.exit(code))
+  main(process.argv.slice(2)).then(code => {
+    process.exitCode = code
+  })
 }
 
 module.exports = {

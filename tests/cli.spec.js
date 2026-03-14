@@ -22,6 +22,11 @@ test("lists tools metadata", async () => {
   const payload = parseJson(result.stdout)
   expect(payload).toHaveProperty("tools")
   expect(payload.tools["repo.map"]).toBeTruthy()
+  expect(payload.tools["repo.findFiles"]).toBeTruthy()
+  expect(payload.tools["docs.extractLinks"]).toBeTruthy()
+  expect(payload.tools["web.fetch"]).toBeTruthy()
+  expect(payload.tools["data.jsonQuery"]).toBeTruthy()
+  expect(payload.tools["sys.exec"]).toBeTruthy()
 })
 
 test("runs tool through run command", async () => {

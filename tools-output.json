@@ -1,0 +1,597 @@
+{
+  "tools": {
+    "data.csvToJson": {
+      "description": "Convert CSV text or file into JSON rows",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "csv": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "maxRows": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "maxBytes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5000000
+          }
+        }
+      }
+    },
+    "data.jsonQuery": {
+      "description": "Query JSON value by simple path expression",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {},
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      }
+    },
+    "data.jsonSchemaValidate": {
+      "description": "Validate JSON data against provided JSON schema",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema": {
+            "type": "object"
+          },
+          "data": {}
+        },
+        "required": [
+          "schema",
+          "data"
+        ]
+      }
+    },
+    "docs.diffHeadings": {
+      "description": "Compare markdown headings between two files",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "beforeFile": {
+            "type": "string"
+          },
+          "afterFile": {
+            "type": "string"
+          },
+          "maxBytes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5000000
+          }
+        },
+        "required": [
+          "beforeFile",
+          "afterFile"
+        ]
+      }
+    },
+    "docs.extractLinks": {
+      "description": "Extract markdown links with location",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "maxLinks": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "maxBytes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5000000
+          }
+        },
+        "required": [
+          "file"
+        ]
+      }
+    },
+    "docs.frontmatter": {
+      "description": "Parse markdown frontmatter key-value pairs",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "requiredKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "maxBytes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5000000
+          }
+        },
+        "required": [
+          "file"
+        ]
+      }
+    },
+    "docs.headings": {
+      "description": "Extract markdown headings",
+      "input": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ]
+      }
+    },
+    "docs.summarizeMarkdown": {
+      "description": "Summarize markdown document by heading sections",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "maxSections": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "previewWords": {
+            "type": "number",
+            "minimum": 5,
+            "maximum": 120
+          },
+          "maxBytes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5000000
+          }
+        },
+        "required": [
+          "file"
+        ]
+      }
+    },
+    "repo.findFiles": {
+      "description": "Find files by include and exclude patterns",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "include": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "exclude": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "maxDepth": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 25
+          },
+          "maxResults": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 10000
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    "repo.listSymbols": {
+      "description": "List likely code symbols using lightweight heuristics",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "extensions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "maxDepth": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "maxFiles": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5000
+          },
+          "maxFileBytes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5000000
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    "repo.map": {
+      "description": "Map repository structure",
+      "input": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "maxDepth": {
+            "type": "number",
+            "minimum": 1
+          },
+          "includeHidden": {
+            "type": "boolean"
+          },
+          "excludes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "maxEntries": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    "repo.patchFile": {
+      "description": "Patch file text by string replacement",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "search": {
+            "type": "string"
+          },
+          "replace": {
+            "type": "string"
+          },
+          "replaceAll": {
+            "type": "boolean"
+          },
+          "dryRun": {
+            "type": "boolean"
+          },
+          "maxBytes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5000000
+          }
+        },
+        "required": [
+          "path",
+          "search",
+          "replace"
+        ]
+      }
+    },
+    "repo.readFile": {
+      "description": "Read file content with optional line range",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "startLine": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "endLine": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "maxBytes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5000000
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    "repo.searchText": {
+      "description": "Search text in workspace files",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "caseSensitive": {
+            "type": "boolean"
+          },
+          "useRegex": {
+            "type": "boolean"
+          },
+          "maxDepth": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 25
+          },
+          "maxMatches": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "maxFileBytes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 10000000
+          }
+        },
+        "required": [
+          "path",
+          "query"
+        ]
+      }
+    },
+    "repo.writeFile": {
+      "description": "Write UTF-8 content to a workspace file",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "createDirs": {
+            "type": "boolean"
+          },
+          "overwrite": {
+            "type": "boolean"
+          },
+          "maxBytes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5000000
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ]
+      }
+    },
+    "sys.envInspect": {
+      "description": "Inspect selected environment and runtime metadata",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "maxKeys": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 200
+          }
+        }
+      }
+    },
+    "sys.exec": {
+      "description": "Execute an allowlisted system command with timeout",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "type": "string"
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cwd": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "number",
+            "minimum": 100,
+            "maximum": 120000
+          },
+          "maxOutputBytes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5000000
+          },
+          "allowlist": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "command"
+        ]
+      }
+    },
+    "sys.processList": {
+      "description": "List running processes with optional text filter",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "contains": {
+            "type": "string"
+          },
+          "maxResults": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5000
+          }
+        }
+      }
+    },
+    "web.checkStatus": {
+      "description": "Check HTTP status, headers, and redirect count",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "number",
+            "minimum": 100,
+            "maximum": 120000
+          },
+          "maxRedirects": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 20
+          }
+        },
+        "required": [
+          "url"
+        ]
+      }
+    },
+    "web.extractMetadata": {
+      "description": "Extract common metadata from HTML or URL",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "html": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "number",
+            "minimum": 100,
+            "maximum": 120000
+          },
+          "maxBytes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5000000
+          }
+        }
+      }
+    },
+    "web.extractText": {
+      "description": "Extract readable text from HTML or URL",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "html": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "number",
+            "minimum": 100,
+            "maximum": 120000
+          },
+          "maxBytes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5000000
+          }
+        }
+      }
+    },
+    "web.fetch": {
+      "description": "Fetch a URL with timeout and content limits",
+      "input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "number",
+            "minimum": 100,
+            "maximum": 120000
+          },
+          "maxBytes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5000000
+          }
+        },
+        "required": [
+          "url"
+        ]
+      }
+    }
+  },
+  "loadErrors": []
+}

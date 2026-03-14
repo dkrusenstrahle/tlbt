@@ -43,6 +43,8 @@ Example:
 
 ```bash
 tlbt run repo.map '{"path":".","maxDepth":1}'
+tlbt run repo.searchText '{"path":".","query":"TODO","maxMatches":20}'
+tlbt run web.fetch '{"url":"https://example.com"}'
 ```
 
 ## `tlbt <tool> [input]`
@@ -57,6 +59,18 @@ Examples:
 tlbt repo.map .
 tlbt docs.headings README.md
 ```
+
+## Tool output shape
+
+Most new built-in tools return this success envelope:
+
+```json
+{
+  "ok": true
+}
+```
+
+Tool-specific fields are included alongside `ok`.
 
 ## `tlbt install <plugin>`
 

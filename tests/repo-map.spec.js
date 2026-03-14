@@ -12,7 +12,8 @@ test("maps fixture repo deterministically with defaults", async () => {
   expect(result.entries.map(entry => entry.path)).toEqual([
     "dir-b",
     "dir-b/file-b.txt",
-    "file-a.txt"
+    "file-a.txt",
+    "symbols.js"
   ])
 })
 

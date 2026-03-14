@@ -61,6 +61,22 @@ curl -s -X POST http://127.0.0.1:8787/run \
   -d '{"tool":"repo.map","input":{"path":"."}}'
 ```
 
+Another example (web status probe):
+
+```bash
+curl -s -X POST http://127.0.0.1:8787/run \
+  -H 'content-type: application/json' \
+  -d '{"tool":"web.checkStatus","input":{"url":"https://example.com"}}'
+```
+
+Typical success payload:
+
+```json
+{
+  "ok": true
+}
+```
+
 ## Error responses
 
 Common status codes:

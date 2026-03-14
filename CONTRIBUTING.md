@@ -10,13 +10,13 @@ Thanks for contributing to TLBT.
 npm install
 ```
 
-2. Run tests:
+1. Run tests:
 
 ```bash
 npm test
 ```
 
-3. Run coverage gate:
+1. Run coverage gate:
 
 ```bash
 npm run coverage
@@ -28,6 +28,8 @@ npm run coverage
 - Keep tools composable and JSON-first.
 - Prefer simple APIs and low dependency overhead.
 - Add schema definitions for every tool input.
+- Follow the tool template in `docs/tool-spec-template.md`.
+- Add explicit guardrails (timeouts, size limits, max results) for new tools.
 
 ## Pull request guidelines
 

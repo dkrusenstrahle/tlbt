@@ -3,6 +3,7 @@
 TLBT is a lightweight CLI runtime for tools designed to be called by humans, scripts, and AI agents.
 
 The runtime stays intentionally small and focuses on:
+
 - tool discovery
 - tool execution
 - plugin loading
@@ -12,12 +13,14 @@ All tool behavior lives in tools.
 ## Why TLBT
 
 TLBT provides small, composable non-AI primitives that agents frequently need:
+
 - repository analysis
 - documentation extraction
 - web scraping primitives
 - data transformation utilities
 
 Core philosophy:
+
 - **Small tools**: each tool does one thing well.
 - **Machine-friendly**: tools return JSON.
 - **Schema-based**: each tool declares JSON-schema input.
@@ -53,8 +56,42 @@ tlbt --version
 
 ## Built-in Tools
 
-- `repo.map`: maps repository structure with traversal controls.
-- `docs.headings`: extracts Markdown headings with level and line number.
+### Repo/Codebase
+
+- `repo.map`: map repository structure with traversal controls.
+- `repo.findFiles`: list files by include/exclude patterns.
+- `repo.searchText`: search workspace text with match limits.
+- `repo.readFile`: read file content with optional line ranges.
+- `repo.writeFile`: write or create files in the workspace.
+- `repo.patchFile`: apply string-based file patches with dry-run support.
+- `repo.listSymbols`: extract likely symbols from source files.
+
+### Docs/Knowledge
+
+- `docs.headings`: extract markdown headings with level and line number.
+- `docs.extractLinks`: collect markdown links with context.
+- `docs.summarizeMarkdown`: summarize markdown by heading sections.
+- `docs.diffHeadings`: compare heading structures across two files.
+- `docs.frontmatter`: parse and validate markdown frontmatter fields.
+
+### Web/Research
+
+- `web.fetch`: fetch URL content with timeout and max-byte guardrails.
+- `web.extractText`: extract readable text from HTML or URL input.
+- `web.extractMetadata`: extract title/description/canonical/OpenGraph metadata.
+- `web.checkStatus`: inspect status code, headers, and redirect behavior.
+
+### Data/Transform
+
+- `data.jsonQuery`: query nested JSON by path expressions.
+- `data.csvToJson`: convert CSV (inline or file) into JSON rows.
+- `data.jsonSchemaValidate`: validate JSON payloads against a schema.
+
+### System/Ops
+
+- `sys.exec`: run allowlisted commands with strict timeout/output caps.
+- `sys.processList`: inspect running processes with optional filtering.
+- `sys.envInspect`: expose selected environment and runtime metadata.
 
 ## Documentation
 
@@ -66,6 +103,7 @@ tlbt --version
 ## Tool Format
 
 Each tool exports:
+
 - `name`
 - `description`
 - `input` (JSON schema)

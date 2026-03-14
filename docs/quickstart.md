@@ -54,6 +54,21 @@ Extract document headings:
 tlbt run docs.headings '{"file":"README.md"}'
 ```
 
+Find files and search text:
+
+```bash
+tlbt run repo.findFiles '{"path":".","include":["*.md"],"maxDepth":3}'
+tlbt run repo.searchText '{"path":".","query":"tool","maxMatches":10}'
+```
+
+Use web/data/system tools:
+
+```bash
+tlbt run web.checkStatus '{"url":"https://example.com"}'
+tlbt run data.csvToJson '{"file":"tests/fixtures/data/sample.csv"}'
+tlbt run sys.envInspect '{"keys":["SHELL","PATH"]}'
+```
+
 ## Start the HTTP server
 
 ```bash
