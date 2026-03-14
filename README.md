@@ -30,7 +30,7 @@ Core philosophy:
 ## Quick Start
 
 ```bash
-npm install @tlbt/cli -g
+npm install
 node cli.js tools
 node cli.js run repo.map '{"path":"."}'
 node cli.js serve
@@ -39,8 +39,10 @@ node cli.js serve
 When installed globally:
 
 ```bash
+npm install @tlbt/cli -g
 tlbt tools
 tlbt run repo.map '{"path":"."}'
+tlbt serve
 ```
 
 ## Runtime Commands
