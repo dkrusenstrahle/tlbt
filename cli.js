@@ -2,18 +2,38 @@
 
 const { loadTools } = require("./registry")
 const { installPlugin } = require("./plugins")
+const pkg = require("./package.json")
 
 const tools = loadTools()
+const args = process.argv.slice(2)
+const command = args[0]
 
-const [, , command, arg1, arg2] = process.argv
+function showHelp() {
+  console.log(`
+TLBT — Agent Toolbelt
 
-if (!command) {
-  console.log("TLBT — Agent Toolbelt\n")
-  console.log("Commands:")
-  console.log("  tlbt tools")
-  console.log("  tlbt run <tool> <json>")
-  console.log("  tlbt serve")
-  console.log("  tlbt install <plugin>\n")
+Usage:
+  tlbt tools
+  tlbt <tool> [input]
+  tlbt run <tool> <json>
+  tlbt install <plugin>
+  tlbt serve
+  tlbt --version
+
+Examples:
+  tlbt repo.map .
+  tlbt docs.headings README.md
+  tlbt run repo.map '{"path":"."}'
+`)
+}
+
+if (!command || command === "help") {
+  showHelp()
+  process.exit(0)
+}
+
+if (command === "--version" || command === "-v") {
+  console.log(pkg.version)
   process.exit(0)
 }
 
@@ -31,15 +51,35 @@ if (command === "tools") {
   process.exit(0)
 }
 
-if (command === "run") {
-  const tool = tools[arg1]
+if (command === "install") {
+  const plugin = args[1]
 
-  if (!tool) {
-    console.error("Tool not found:", arg1)
+  if (!plugin) {
+    console.error("Please provide a plugin name")
     process.exit(1)
   }
 
-  const input = arg2 ? JSON.parse(arg2) : {}
+  installPlugin(plugin)
+  return
+}
+
+if (command === "serve") {
+  require("./server")
+  return
+}
+
+if (command === "run") {
+  const toolName = args[1]
+  const inputJson = args[2] || "{}"
+
+  const tool = tools[toolName]
+
+  if (!tool) {
+    console.error("Tool not found:", toolName)
+    process.exit(1)
+  }
+
+  const input = JSON.parse(inputJson)
 
   Promise.resolve(tool.run(input))
     .then(result => {
@@ -50,11 +90,36 @@ if (command === "run") {
   return
 }
 
-if (command === "serve") {
-  require("./server")
-  return
+/*
+Direct tool execution
+Example:
+  tlbt repo.map .
+  tlbt docs.headings README.md
+*/
+
+const tool = tools[command]
+
+if (!tool) {
+  console.error("Unknown command or tool:", command)
+  process.exit(1)
 }
 
-if (command === "install") {
-  installPlugin(arg1)
+const rawInput = args[1]
+let input = {}
+
+if (rawInput) {
+  if (rawInput.startsWith("{")) {
+    input = JSON.parse(rawInput)
+  } else {
+    input = {
+      path: rawInput,
+      file: rawInput
+    }
+  }
 }
+
+Promise.resolve(tool.run(input))
+  .then(result => {
+    console.log(JSON.stringify(result, null, 2))
+  })
+  .catch(err => console.error(err))

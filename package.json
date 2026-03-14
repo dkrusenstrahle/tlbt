@@ -1,6 +1,6 @@
 {
   "name": "@tlbt/cli",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "TLBT — Toolbelt for AI agents",
   "bin": {
     "tlbt": "./cli.js"
@@ -8,6 +8,7 @@
   "preferGlobal": true,
   "license": "MIT",
   "dependencies": {
+    "@tlbt/cli": "^0.0.2",
     "express": "^4.19.2"
   }
 }
