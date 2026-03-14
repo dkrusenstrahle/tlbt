@@ -30,7 +30,7 @@ Core philosophy:
 ## Quick Start
 
 ```bash
-npm install
+npm install @tlbt/cli -g
 node cli.js tools
 node cli.js run repo.map '{"path":"."}'
 node cli.js serve
